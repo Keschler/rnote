@@ -499,6 +499,17 @@ impl StrokeStore {
             if let Some(stroke) = self.stroke_components.get(key)
                 && let Some(render_comp) = self.render_components.get(key)
             {
+                // Check if this is a highlighter stroke and apply multiply blend mode
+                let is_highlighter = self
+                    .chrono_components
+                    .get(key)
+                    .map(|chrono| chrono.layer == StrokeLayer::Highlighter)
+                    .unwrap_or(false);
+
+                if is_highlighter {
+                    snapshot.push_blend(gsk::BlendMode::Multiply);
+                }
+
                 // if the stroke currently does not have a rendering and is will create one,
                 // draw a placeholder filled rect
                 if render_comp.rendernodes.is_empty()
@@ -511,17 +522,6 @@ impl StrokeStore {
                         &gdk::RGBA::from_piet_color(color::GNOME_BRIGHTS[1].with_alpha(0.13)),
                         &graphene::Rect::from_p2d_aabb(stroke.bounds()),
                     );
-                }
-
-                // Check if this is a highlighter stroke and apply multiply blend mode
-                let is_highlighter = self
-                    .chrono_components
-                    .get(key)
-                    .map(|chrono| chrono.layer == StrokeLayer::Highlighter)
-                    .unwrap_or(false);
-
-                if is_highlighter {
-                    snapshot.push_blend(gsk::BlendMode::Multiply);
                 }
 
                 for rendernode in render_comp.rendernodes.iter() {
