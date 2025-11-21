@@ -489,7 +489,8 @@ impl StrokeStore {
         viewport: Aabb,
     ) {
         use crate::ext::{GdkRGBAExt, GrapheneRectExt};
-        use gtk4::{gdk, graphene, prelude::*};
+        use crate::store::chrono_comp::StrokeLayer;
+        use gtk4::{gdk, graphene, gsk, prelude::*};
         use rnote_compose::color;
 
         snapshot.push_clip(&graphene::Rect::from_p2d_aabb(doc_bounds));
@@ -498,6 +499,17 @@ impl StrokeStore {
             if let Some(stroke) = self.stroke_components.get(key)
                 && let Some(render_comp) = self.render_components.get(key)
             {
+                // Check if this is a highlighter stroke and apply multiply blend mode
+                let is_highlighter = self
+                    .chrono_components
+                    .get(key)
+                    .map(|chrono| chrono.layer == StrokeLayer::Highlighter)
+                    .unwrap_or(false);
+
+                if is_highlighter {
+                    snapshot.push_blend(gsk::BlendMode::Multiply);
+                }
+
                 // if the stroke currently does not have a rendering and is will create one,
                 // draw a placeholder filled rect
                 if render_comp.rendernodes.is_empty()
@@ -514,6 +526,10 @@ impl StrokeStore {
 
                 for rendernode in render_comp.rendernodes.iter() {
                     snapshot.append_node(rendernode);
+                }
+
+                if is_highlighter {
+                    snapshot.pop();
                 }
             }
         }
